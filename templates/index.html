@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kolors Virtual Try-On Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a; color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .subtitle { color: #94a3b8; margin-bottom: 1.5rem; }
+    form {
+      display: flex; flex-direction: column; gap: 0.75rem;
+      background: #1e293b; padding: 1.5rem; border-radius: 8px;
+      margin-bottom: 1.5rem;
+    }
+    label span { display: block; font-weight: 500; margin-bottom: 0.25rem; font-size: 0.9rem; }
+    input[type="text"], input[type="number"] {
+      width: 100%; padding: 0.5rem 0.75rem; border-radius: 6px;
+      border: 1px solid #334155; background: #0f172a; color: #e2e8f0;
+      font-size: 0.9rem;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none; border-color: #3b82f6;
+    }
+    .checkbox-row { display: flex; align-items: center; gap: 0.5rem; }
+    button {
+      width: fit-content; padding: 0.6rem 1.5rem; border-radius: 6px;
+      border: none; background: #3b82f6; color: #fff;
+      font-weight: 600; font-size: 0.95rem; cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #2563eb; }
+    button:disabled { background: #475569; cursor: wait; }
+    .error {
+      color: #fca5a5; background: #450a0a; border: 1px solid #7f1d1d;
+      padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;
+    }
+    .preview-row {
+      display: flex; flex-wrap: wrap; gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .preview-block { flex: 1 1 200px; }
+    .preview-block h3 { font-size: 0.95rem; margin-bottom: 0.5rem; color: #94a3b8; }
+    .preview-block img {
+      max-width: 100%; max-height: 350px; border-radius: 8px;
+      border: 1px solid #334155; object-fit: contain;
+      background: #1e293b;
+    }
+    .result { margin-top: 1rem; }
+    .result h2 { font-size: 1.25rem; margin-bottom: 0.75rem; }
+    .result img {
+      max-width: 100%; border-radius: 8px;
+      border: 1px solid #334155;
+    }
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid #fff; border-top-color: transparent;
+      border-radius: 50%; animation: spin 0.6s linear infinite;
+      vertical-align: middle; margin-right: 0.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Kolors Virtual Try-On Demo</h1>
+    <p class="subtitle">Enter a person image URL and garment image URL to generate a virtual try-on result.</p>
+
+    {% if error %}
+    <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/tryon" id="tryonForm">
+      <label>
+        <span>Person image URL</span>
+        <input type="text" name="person_image_url" id="personUrl"
+               value="{{ person_image_url or 'https://pub-582b7213209642b9b995c96c95a30381.r2.dev/vt_human.jpg' }}"
+               required />
+      </label>
+      <label>
+        <span>Garment image URL</span>
+        <input type="text" name="garment_image_url" id="garmentUrl"
+               value="{{ garment_image_url or 'https://neonkernel.com/cdn/shop/files/mens-pullover-hoodie_e5e0705a-dbdf-456d-8a33-f5836c1802de.png?v=1772989855&width=2560' }}"
+               required />
+      </label>
+      <label>
+        <span>Seed</span>
+        <input type="number" name="seed" value="0" />
+      </label>
+      <div class="checkbox-row">
+        <input type="checkbox" name="randomize_seed" id="randSeed" checked />
+        <label for="randSeed">Randomize seed</label>
+      </div>
+      <button type="submit" id="submitBtn">Generate try-on</button>
+    </form>
+
+    <div class="preview-row">
+      <div class="preview-block">
+        <h3>Person</h3>
+        <img id="personPreview"
+             src="{{ person_image_url or 'https://pub-582b7213209642b9b995c96c95a30381.r2.dev/vt_human.jpg' }}"
+             alt="Person" />
+      </div>
+      <div class="preview-block">
+        <h3>Garment</h3>
+        <img id="garmentPreview"
+             src="{{ garment_image_url or 'https://neonkernel.com/cdn/shop/files/mens-pullover-hoodie_e5e0705a-dbdf-456d-8a33-f5836c1802de.png?v=1772989855&width=2560' }}"
+             alt="Garment" />
+      </div>
+    </div>
+
+    {% if result %}
+    <div class="result">
+      <h2>Result</h2>
+      <img src="{{ result }}" alt="Try-on result" />
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    // Live preview update
+    document.getElementById('personUrl').addEventListener('input', e => {
+      document.getElementById('personPreview').src = e.target.value;
+    });
+    document.getElementById('garmentUrl').addEventListener('input', e => {
+      document.getElementById('garmentPreview').src = e.target.value;
+    });
+    // Disable button on submit
+    document.getElementById('tryonForm').addEventListener('submit', () => {
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Generating...';
+    });
+  </script>
+</body>
+</html>
