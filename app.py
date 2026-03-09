@@ -1,9 +1,12 @@
-from fastapi import FastAPI, Form, Request
+from fastapi import FastAPI, Form, Request, File, UploadFile
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
 import os
+import base64
+import uuid
+import shutil
 
 API_URL = "https://aimirr-kolors-tryon-api-00f4aac34959.herokuapp.com/tryon"
 API_KEY = os.getenv("TRYON_API_KEY", "")
@@ -11,12 +14,19 @@ API_KEY = os.getenv("TRYON_API_KEY", "")
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs("static", exist_ok=True)
+
 try:
-    os.makedirs("static", exist_ok=True)
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except Exception:
     pass
 
+try:
+    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+except Exception:
+    pass
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -26,76 +36,58 @@ async def index(request: Request):
             "request": request,
             "result": None,
             "error": None,
-            "person_image_url": None,
-            "garment_image_url": None,
+            "person_image_url": "",
+            "garment_image_url": "",
             "loading": False,
+            "person_upload_preview": None,
         },
     )
-
 
 @app.post("/tryon", response_class=HTMLResponse)
 async def tryon(
     request: Request,
-    person_image_url: str = Form(...),
+    person_image_url: str = Form(""),
     garment_image_url: str = Form(...),
-    seed: int = Form(0),
-    randomize_seed: bool = Form(False),
+    person_image_file: UploadFile = File(None),
 ):
-    payload = {
-        "person_image_url": person_image_url,
-        "garment_image_url": garment_image_url,
-        "seed": seed,
-        "randomize_seed": randomize_seed,
-    }
-
     try:
-        async with httpx.AsyncClient(timeout=180) as client:
-            resp = await client.post(
-                API_URL,
-                headers={
-                    "Content-Type": "application/json",
-                    "X-API-Key": API_KEY,
-                },
-                json=payload,
-            )
-        data = resp.json()
-        if not resp.is_success:
-            return templates.TemplateResponse(
-                "index.html",
-                {
-                    "request": request,
-                    "result": None,
-                    "error": data.get("message", f"Request failed ({resp.status_code})"),
-                    "person_image_url": person_image_url,
-                    "garment_image_url": garment_image_url,
-                    "loading": False,
-                },
-            )
-
-        # Try common response field names
-        result_b64 = (
-            data.get("result_image_base64")
-            or data.get("image_base64")
-            or data.get("image")
-        )
-        result_url = data.get("result_image_url") or data.get("image_url")
-
-        if result_b64:
-            img_src = f"data:image/png;base64,{result_b64}"
-        elif result_url:
-            img_src = result_url
+        # Handle person image: file upload or URL
+        person_upload_preview = None
+        if person_image_file and person_image_file.filename:
+            # Save uploaded file
+            ext = os.path.splitext(person_image_file.filename)[1] or ".jpg"
+            filename = f"{uuid.uuid4().hex}{ext}"
+            filepath = os.path.join(UPLOAD_DIR, filename)
+            with open(filepath, "wb") as f:
+                shutil.copyfileobj(person_image_file.file, f)
+            # Read and base64 encode
+            with open(filepath, "rb") as f:
+                img_bytes = f.read()
+            b64 = base64.b64encode(img_bytes).decode("utf-8")
+            person_image_url_to_send = f"data:image/jpeg;base64,{b64}"
+            person_upload_preview = f"/uploads/{filename}"
         else:
-            return templates.TemplateResponse(
-                "index.html",
-                {
-                    "request": request,
-                    "result": None,
-                    "error": f"Unexpected API response keys: {list(data.keys())}",
-                    "person_image_url": person_image_url,
-                    "garment_image_url": garment_image_url,
-                    "loading": False,
-                },
-            )
+            person_image_url_to_send = person_image_url
+
+        headers = {"Content-Type": "application/json"}
+        if API_KEY:
+            headers["X-API-Key"] = API_KEY
+
+        payload = {
+            "person_image": person_image_url_to_send,
+            "garment_image": garment_image_url,
+            "seed": 42,
+            "randomize_seed": True,
+        }
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(API_URL, json=payload, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+
+        img_src = data.get("result_image") or data.get("image") or data.get("output")
+        if not img_src:
+            img_src = str(data)
 
         return templates.TemplateResponse(
             "index.html",
@@ -106,6 +98,7 @@ async def tryon(
                 "person_image_url": person_image_url,
                 "garment_image_url": garment_image_url,
                 "loading": False,
+                "person_upload_preview": person_upload_preview,
             },
         )
 
@@ -119,5 +112,6 @@ async def tryon(
                 "person_image_url": person_image_url,
                 "garment_image_url": garment_image_url,
                 "loading": False,
+                "person_upload_preview": None,
             },
         )

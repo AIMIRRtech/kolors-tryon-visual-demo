@@ -1,142 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Kolors Virtual Try-On Demo</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #0f172a; color: #e2e8f0;
-      min-height: 100vh;
-    }
-    .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
-    h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
-    .subtitle { color: #94a3b8; margin-bottom: 1.5rem; }
-    form {
-      display: flex; flex-direction: column; gap: 0.75rem;
-      background: #1e293b; padding: 1.5rem; border-radius: 8px;
-      margin-bottom: 1.5rem;
-    }
-    label span { display: block; font-weight: 500; margin-bottom: 0.25rem; font-size: 0.9rem; }
-    input[type="text"], input[type="number"] {
-      width: 100%; padding: 0.5rem 0.75rem; border-radius: 6px;
-      border: 1px solid #334155; background: #0f172a; color: #e2e8f0;
-      font-size: 0.9rem;
-    }
-    input[type="text"]:focus, input[type="number"]:focus {
-      outline: none; border-color: #3b82f6;
-    }
-    .checkbox-row { display: flex; align-items: center; gap: 0.5rem; }
-    button {
-      width: fit-content; padding: 0.6rem 1.5rem; border-radius: 6px;
-      border: none; background: #3b82f6; color: #fff;
-      font-weight: 600; font-size: 0.95rem; cursor: pointer;
-      transition: background 0.2s;
-    }
-    button:hover { background: #2563eb; }
-    button:disabled { background: #475569; cursor: wait; }
-    .error {
-      color: #fca5a5; background: #450a0a; border: 1px solid #7f1d1d;
-      padding: 0.75rem 1rem; border-radius: 6px; margin-bottom: 1rem;
-    }
-    .preview-row {
-      display: flex; flex-wrap: wrap; gap: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    .preview-block { flex: 1 1 200px; }
-    .preview-block h3 { font-size: 0.95rem; margin-bottom: 0.5rem; color: #94a3b8; }
-    .preview-block img {
-      max-width: 100%; max-height: 350px; border-radius: 8px;
-      border: 1px solid #334155; object-fit: contain;
-      background: #1e293b;
-    }
-    .result { margin-top: 1rem; }
-    .result h2 { font-size: 1.25rem; margin-bottom: 0.75rem; }
-    .result img {
-      max-width: 100%; border-radius: 8px;
-      border: 1px solid #334155;
-    }
-    .spinner {
-      display: inline-block; width: 18px; height: 18px;
-      border: 2px solid #fff; border-top-color: transparent;
-      border-radius: 50%; animation: spin 0.6s linear infinite;
-      vertical-align: middle; margin-right: 0.5rem;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kolors Virtual Try-On</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 24px; font-size: 0.9rem; }
+        form { background: #1a1a2e; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+        .form-group { margin-bottom: 16px; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; color: #b0b0b0; }
+        input[type="text"] { width: 100%; padding: 10px 14px; border: 1px solid #333; border-radius: 8px; background: #16213e; color: #e0e0e0; font-size: 0.95rem; }
+        input[type="text"]:focus { outline: none; border-color: #667eea; }
+        .upload-area { border: 2px dashed #444; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: #16213e; }
+        .upload-area:hover { border-color: #667eea; background: #1a1a3e; }
+        .upload-area.has-file { border-color: #4caf50; background: #1a2e1a; }
+        .upload-area input[type="file"] { display: none; }
+        .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+        .upload-text { font-size: 0.85rem; color: #888; }
+        .upload-filename { color: #4caf50; font-weight: 600; margin-top: 8px; }
+        .preview-img { max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 10px; }
+        .or-divider { text-align: center; color: #666; margin: 12px 0; font-size: 0.85rem; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #667eea, #764ba2); color: white; transition: transform 0.2s, opacity 0.2s; }
+        button:hover { transform: translateY(-1px); opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .error { background: #2d1b1b; border: 1px solid #c62828; border-radius: 8px; padding: 12px; margin-bottom: 16px; color: #ef9a9a; }
+        .result-section { background: #1a1a2e; border-radius: 12px; padding: 24px; text-align: center; }
+        .result-section h2 { margin-bottom: 16px; font-size: 1.2rem; }
+        .result-section img { max-width: 100%; border-radius: 8px; }
+        .loading { display: none; text-align: center; padding: 40px; }
+        .loading.active { display: block; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top-color: #667eea; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Kolors Virtual Try-On Demo</h1>
-    <p class="subtitle">Enter a person image URL and garment image URL to generate a virtual try-on result.</p>
+    <div class="container">
+        <h1>Kolors Virtual Try-On</h1>
+        <p class="subtitle">Upload or provide a URL for the person image, and a garment image URL</p>
 
-    {% if error %}
-    <div class="error">{{ error }}</div>
-    {% endif %}
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
 
-    <form method="post" action="/tryon" id="tryonForm">
-      <label>
-        <span>Person image URL</span>
-        <input type="text" name="person_image_url" id="personUrl"
-               value="{{ person_image_url or 'https://pub-582b7213209642b9b995c96c95a30381.r2.dev/vt_human.jpg' }}"
-               required />
-      </label>
-      <label>
-        <span>Garment image URL</span>
-        <input type="text" name="garment_image_url" id="garmentUrl"
-               value="{{ garment_image_url or 'https://neonkernel.com/cdn/shop/files/mens-pullover-hoodie_e5e0705a-dbdf-456d-8a33-f5836c1802de.png?v=1772989855&width=2560' }}"
-               required />
-      </label>
-      <label>
-        <span>Seed</span>
-        <input type="number" name="seed" value="0" />
-      </label>
-      <div class="checkbox-row">
-        <input type="checkbox" name="randomize_seed" id="randSeed" checked />
-        <label for="randSeed">Randomize seed</label>
-      </div>
-      <button type="submit" id="submitBtn">Generate try-on</button>
-    </form>
+        <form action="/tryon" method="post" enctype="multipart/form-data" id="tryonForm">
+            <div class="form-group">
+                <label>Person Image (upload from device)</label>
+                <div class="upload-area" id="uploadArea" onclick="document.getElementById('personFile').click()">
+                    <input type="file" id="personFile" name="person_image_file" accept="image/*" capture="environment">
+                    <div class="upload-icon">&#128247;</div>
+                    <div class="upload-text">Tap to take a photo or choose from gallery</div>
+                    <div class="upload-filename" id="fileName" style="display:none"></div>
+                    <img id="previewImg" class="preview-img" style="display:none">
+                    {% if person_upload_preview %}
+                    <img src="{{ person_upload_preview }}" class="preview-img">
+                    {% endif %}
+                </div>
+            </div>
 
-    <div class="preview-row">
-      <div class="preview-block">
-        <h3>Person</h3>
-        <img id="personPreview"
-             src="{{ person_image_url or 'https://pub-582b7213209642b9b995c96c95a30381.r2.dev/vt_human.jpg' }}"
-             alt="Person" />
-      </div>
-      <div class="preview-block">
-        <h3>Garment</h3>
-        <img id="garmentPreview"
-             src="{{ garment_image_url or 'https://neonkernel.com/cdn/shop/files/mens-pullover-hoodie_e5e0705a-dbdf-456d-8a33-f5836c1802de.png?v=1772989855&width=2560' }}"
-             alt="Garment" />
-      </div>
+            <div class="or-divider">&#8212; OR &#8212;</div>
+
+            <div class="form-group">
+                <label>Person Image URL</label>
+                <input type="text" name="person_image_url" value="{{ person_image_url or ''}}" placeholder="https://example.com/person.jpg">
+            </div>
+
+            <div class="form-group">
+                <label>Garment Image URL</label>
+                <input type="text" name="garment_image_url" value="{{ garment_image_url or ''}}" placeholder="https://example.com/garment.jpg" required>
+            </div>
+
+            <button type="submit" id="submitBtn">Generate Try-On</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Generating try-on... This may take up to 60 seconds.</p>
+        </div>
+
+        {% if result %}
+        <div class="result-section">
+            <h2>Result</h2>
+            <img src="{{ result }}" alt="Try-on result">
+        </div>
+        {% endif %}
     </div>
 
-    {% if result %}
-    <div class="result">
-      <h2>Result</h2>
-      <img src="{{ result }}" alt="Try-on result" />
-    </div>
-    {% endif %}
-  </div>
+    <script>
+        const fileInput = document.getElementById("personFile");
+        const uploadArea = document.getElementById("uploadArea");
+        const fileName = document.getElementById("fileName");
+        const previewImg = document.getElementById("previewImg");
 
-  <script>
-    // Live preview update
-    document.getElementById('personUrl').addEventListener('input', e => {
-      document.getElementById('personPreview').src = e.target.value;
-    });
-    document.getElementById('garmentUrl').addEventListener('input', e => {
-      document.getElementById('garmentPreview').src = e.target.value;
-    });
-    // Disable button on submit
-    document.getElementById('tryonForm').addEventListener('submit', () => {
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>Generating...';
-    });
-  </script>
+        fileInput.addEventListener("change", function() {
+            if (this.files && this.files[0]) {
+                fileName.textContent = this.files[0].name;
+                fileName.style.display = "block";
+                uploadArea.classList.add("has-file");
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = "block";
+                };
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+
+        document.getElementById("tryonForm").addEventListener("submit", function() {
+            document.getElementById("loading").classList.add("active");
+            document.getElementById("submitBtn").disabled = true;
+        });
+    </script>
 </body>
 </html>
