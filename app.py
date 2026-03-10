@@ -4,12 +4,26 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import httpx
 import os
-import base64
 import uuid
 import shutil
+from azure_blob import upload_to_blob
 
-API_URL = "https://aimirr-kolors-tryon-api-00f4aac34959.herokuapp.com/tryon"
-API_KEY = os.getenv("TRYON_API_KEY", "")
+try:
+    from dotenv import load_dotenv
+    load_dotenv(".env.local", override=True)
+except Exception:
+    pass
+
+API_URL = os.getenv(
+    "AIMIRR_TRYON_API_URL",
+    "https://aimirr-kolors-tryon-api-00f4aac34959.herokuapp.com/tryon",
+)
+API_KEY = (
+    os.getenv("TRYON_API_KEY")
+    or os.getenv("AIMIRR_TRYON_API_KEY")
+    or os.getenv("AIMIRR_API_KEY")
+    or ""
+)
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -60,11 +74,10 @@ async def tryon(
             filepath = os.path.join(UPLOAD_DIR, filename)
             with open(filepath, "wb") as f:
                 shutil.copyfileobj(person_image_file.file, f)
-            # Read and base64 encode
+            # Upload to Azure Blob and pass a SAS URL to upstream API.
             with open(filepath, "rb") as f:
                 img_bytes = f.read()
-            b64 = base64.b64encode(img_bytes).decode("utf-8")
-            person_image_url_to_send = f"data:image/jpeg;base64,{b64}"
+            person_image_url_to_send = upload_to_blob(img_bytes, person_image_file.filename)
             person_upload_preview = f"/uploads/{filename}"
         else:
             person_image_url_to_send = person_image_url
@@ -74,9 +87,9 @@ async def tryon(
             headers["X-API-Key"] = API_KEY
 
         payload = {
-            "person_image": person_image_url_to_send,
-            "garment_image": garment_image_url,
-            "seed": 42,
+            "person_image_url": person_image_url_to_send,
+            "garment_image_url": garment_image_url,
+            "seed": 0,
             "randomize_seed": True,
         }
 
@@ -85,7 +98,7 @@ async def tryon(
             resp.raise_for_status()
             data = resp.json()
 
-        img_src = data.get("result_image") or data.get("image") or data.get("output")
+        img_src = data.get("result_image_url") or data.get("result_image") or data.get("image") or data.get("output")
         if not img_src:
             img_src = str(data)
 
