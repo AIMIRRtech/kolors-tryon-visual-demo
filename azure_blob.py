@@ -2,12 +2,6 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv(".env.local", override=True)
-except Exception:
-    pass
-
 from azure.storage.blob import (
     BlobSasPermissions,
     BlobServiceClient,

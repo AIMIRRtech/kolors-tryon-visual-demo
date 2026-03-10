@@ -8,12 +8,6 @@ import uuid
 import shutil
 from azure_blob import upload_to_blob
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv(".env.local", override=True)
-except Exception:
-    pass
-
 API_URL = os.getenv(
     "AIMIRR_TRYON_API_URL",
     "https://aimirr-kolors-tryon-api-00f4aac34959.herokuapp.com/tryon",

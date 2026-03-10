@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kolors Virtual Try-On</title>
+    <title>AIMIRR Virtual Try-On</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f0f0f; color: #e0e0e0; min-height: 100vh; padding: 20px; }
@@ -23,6 +23,8 @@
         .upload-text { font-size: 0.85rem; color: #888; }
         .upload-filename { color: #4caf50; font-weight: 600; margin-top: 8px; }
         .preview-img { max-width: 150px; max-height: 150px; border-radius: 8px; margin-top: 10px; }
+        .garment-preview-wrap { margin-top: 10px; }
+        .garment-preview { max-width: 220px; max-height: 220px; border-radius: 8px; border: 1px solid #333; background: #0f162d; }
         .or-divider { text-align: center; color: #666; margin: 12px 0; font-size: 0.85rem; }
         button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; background: linear-gradient(135deg, #667eea, #764ba2); color: white; transition: transform 0.2s, opacity 0.2s; }
         button:hover { transform: translateY(-1px); opacity: 0.9; }
@@ -39,7 +41,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Kolors Virtual Try-On</h1>
+        <h1>AIMIRR Virtual Try-On</h1>
         <p class="subtitle">Upload or provide a URL for the person image, and a garment image URL</p>
 
         {% if error %}
@@ -52,7 +54,7 @@
                 <div class="upload-area" id="uploadArea" onclick="document.getElementById('personFile').click()">
                     <input type="file" id="personFile" name="person_image_file" accept="image/*" capture="environment">
                     <div class="upload-icon">&#128247;</div>
-                    <div class="upload-text">Tap to take a photo or choose from gallery</div>
+                    <div class="upload-text" id="uploadText">Tap to take a photo or choose from gallery</div>
                     <div class="upload-filename" id="fileName" style="display:none"></div>
                     <img id="previewImg" class="preview-img" style="display:none">
                     {% if person_upload_preview %}
@@ -70,7 +72,10 @@
 
             <div class="form-group">
                 <label>Garment Image URL</label>
-                <input type="text" name="garment_image_url" value="{{ garment_image_url or ''}}" placeholder="https://example.com/garment.jpg" required>
+                <input type="text" id="garmentUrl" name="garment_image_url" value="{{ garment_image_url or ''}}" placeholder="https://example.com/garment.jpg" required>
+                <div class="garment-preview-wrap">
+                    <img id="garmentPreview" class="garment-preview" alt="Garment URL preview" style="display:none">
+                </div>
             </div>
 
             <button type="submit" id="submitBtn">Generate Try-On</button>
@@ -92,8 +97,55 @@
     <script>
         const fileInput = document.getElementById("personFile");
         const uploadArea = document.getElementById("uploadArea");
+        const uploadText = document.getElementById("uploadText");
         const fileName = document.getElementById("fileName");
         const previewImg = document.getElementById("previewImg");
+        const garmentUrlInput = document.getElementById("garmentUrl");
+        const garmentPreview = document.getElementById("garmentPreview");
+        const defaultGarmentUrl = "https://neonkernel.com/cdn/shop/files/womens-pullover-hoodie.png?v=1772989490&width=2560";
+        const params = new URLSearchParams(window.location.search);
+        let productFromQuery = params.get("product") || params.get("garment_url");
+        const splitWidth = params.get("width");
+
+        // If URL wasn't encoded, '&width=' can get split into its own query param.
+        if (productFromQuery && splitWidth && !productFromQuery.includes("width=")) {
+            productFromQuery = `${productFromQuery}&width=${splitWidth}`;
+        }
+
+        if (productFromQuery && productFromQuery.trim()) {
+            garmentUrlInput.value = productFromQuery.trim();
+        } else if (!garmentUrlInput.value.trim()) {
+            garmentUrlInput.value = defaultGarmentUrl;
+        }
+
+        function refreshGarmentPreview() {
+            const url = garmentUrlInput.value.trim();
+            if (!url) {
+                garmentPreview.style.display = "none";
+                garmentPreview.removeAttribute("src");
+                return;
+            }
+            garmentPreview.src = url;
+            garmentPreview.style.display = "block";
+        }
+
+        refreshGarmentPreview();
+
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (isIOS) {
+            fileInput.removeAttribute("capture");
+            uploadText.textContent = "Tap to choose from gallery";
+        }
+
+        garmentUrlInput.addEventListener("input", refreshGarmentPreview);
+
+        garmentPreview.addEventListener("error", function() {
+            this.style.display = "none";
+        });
+
+        garmentPreview.addEventListener("load", function() {
+            this.style.display = "block";
+        });
 
         fileInput.addEventListener("change", function() {
             if (this.files && this.files[0]) {
